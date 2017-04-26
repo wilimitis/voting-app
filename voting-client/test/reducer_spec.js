@@ -1,0 +1,215 @@
+import {List, Map, fromJS} from 'immutable';
+import {expect} from 'chai';
+
+import reducer from '../src/reducer';
+
+describe('reducer', () => {
+
+  it('handles SET_STATE', () => {
+    const initialState = Map();
+    const action = {
+      type: 'SET_STATE',
+      state: Map({
+        vote: Map({
+          pair: List.of('Trainspotting', '28 Days Later'),
+          tally: Map({Trainspotting: 1})
+        })
+      })
+    };
+    const nextState = reducer(initialState, action);
+
+    expect(nextState).to.equal(fromJS({
+      vote: {
+        pair: ['Trainspotting', '28 Days Later'],
+        tally: {Trainspotting: 1}
+      }
+    }));
+  });
+
+  it('handles SET_STATE with plain JS payload', () => {
+    const initialState = Map();
+    const action = {
+      type: 'SET_STATE',
+      state: {
+        vote: {
+          pair: ['Trainspotting', '28 Days Later'],
+          tally: {Trainspotting: 1}
+        }
+      }
+    };
+    const nextState = reducer(initialState, action);
+
+    expect(nextState).to.equal(fromJS({
+      vote: {
+        pair: ['Trainspotting', '28 Days Later'],
+        tally: {Trainspotting: 1}
+      }
+    }));
+  });
+
+  it('handles SET_STATE without initial state', () => {
+    const action = {
+      type: 'SET_STATE',
+      state: {
+        vote: {
+          pair: ['Trainspotting', '28 Days Later'],
+          tally: {Trainspotting: 1}
+        }
+      }
+    };
+    const nextState = reducer(undefined, action);
+
+    expect(nextState.get('vote')).to.equal(fromJS({
+      pair: ['Trainspotting', '28 Days Later'],
+      tally: {Trainspotting: 1}
+    }));
+
+    expect(nextState.get('voter')).to.not.be.an('undefined');
+  });
+
+  it('handles VOTE by setting hasVoted', () => {
+    const state = fromJS({
+      vote: {
+        pair: ['Trainspotting', '28 Days Later'],
+        tally: {Trainspotting: 1}
+      }
+    });
+    const action = {type: 'VOTE', entry: 'Trainspotting'};
+    const nextState = reducer(state, action);
+
+    expect(nextState).to.equal(fromJS({
+      vote: {
+        pair: ['Trainspotting', '28 Days Later'],
+        tally: {Trainspotting: 1}
+      },
+      hasVoted: 'Trainspotting'
+    }));
+  });
+
+  it('does not set hasVoted for VOTE on invalid entry', () => {
+    const state = fromJS({
+      vote: {
+        pair: ['Trainspotting', '28 Days Later'],
+        tally: {Trainspotting: 1}
+      }
+    });
+    const action = {type: 'VOTE', entry: 'Sunshine'};
+    const nextState = reducer(state, action);
+
+    expect(nextState).to.equal(fromJS({
+      vote: {
+        pair: ['Trainspotting', '28 Days Later'],
+        tally: {Trainspotting: 1}
+      }
+    }));
+  });
+
+  it('doesnt remove hasVoted on SET_STATE if round doesnt change', () => {
+    const initialState = fromJS({
+      vote: {
+        pair: ['Trainspotting', '28 Days Later'],
+        votes: {voter1: 'Trainspotting'},
+        tally: {Trainspotting: 1}
+      },
+      hasVoted: 'Trainspotting',
+      round: 2
+    });
+    const action = {
+      type: 'SET_STATE',
+      state: {
+        vote: {
+          pair: ['Trainspotting', '28 Days Later'],
+          votes: {voter1: 'Trainspotting'},
+          tally: {Trainspotting: 1}
+        },
+        round: 2
+      }
+    };
+    const nextState = reducer(initialState, action);
+
+    expect(nextState).to.equal(fromJS({
+      vote: {
+        pair: ['Trainspotting', '28 Days Later'],
+        votes: {voter1: 'Trainspotting'},
+        tally: {Trainspotting: 1}
+      },
+      hasVoted: 'Trainspotting',
+      round: 2
+    }));
+  });
+
+  it('removes hasVoted on SET_STATE if round changes', () => {
+    const initialState = fromJS({
+      vote: {
+        pair: ['Trainspotting', '28 Days Later'],
+        tally: {Trainspotting: 1}
+      },
+      hasVoted: 'Trainspotting',
+      round: 1
+    });
+    const action = {
+      type: 'SET_STATE',
+      state: {
+        vote: {
+          pair: ['Trainspotting', 'Slumdog Millionaire']
+        },
+        round: 2
+      }
+    };
+    const nextState = reducer(initialState, action);
+
+    expect(nextState).to.equal(fromJS({
+      vote: {
+        pair: ['Trainspotting', 'Slumdog Millionaire']
+      },
+      round: 2
+    }));
+  });
+
+  it('removes hasVoted on SET_STATE if votes were reset', () => {
+    const initialState = fromJS({
+      vote: {
+        pair: ['Trainspotting', '28 Days Later'],
+        tally: {Trainspotting: 1}
+      },
+      hasVoted: 'Trainspotting',
+      round: 2
+    });
+    const action = {
+      type: 'SET_STATE',
+      state: {
+        vote: {
+          pair: ['Trainspotting', 'Slumdog Millionaire']
+        },
+        round: 2
+      }
+    };
+    const nextState = reducer(initialState, action);
+
+    expect(nextState).to.equal(fromJS({
+      vote: {
+        pair: ['Trainspotting', 'Slumdog Millionaire']
+      },
+      round: 2
+    }));
+  });
+
+  it('sets connectionStatus on CONNECTION_STATUS if status changes', () => {
+    expect(
+      reducer(
+        Map({
+          connectionStatus: 'undefined'
+        }),
+        {
+          type: 'CONNECTION_STATUS',
+          connectionStatus: 'something'
+        }
+      )
+    ).to.equal(
+      Map({
+        connectionStatus: 'something'
+      })
+    );
+  });
+
+});
